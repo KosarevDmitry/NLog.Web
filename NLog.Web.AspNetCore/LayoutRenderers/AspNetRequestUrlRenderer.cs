@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Text;
-#if !ASP_NET_CORE
-using System.Collections.Specialized;
-using System.Web;
-#endif
 using NLog.Config;
 using NLog.LayoutRenderers;
 using NLog.Web.Internal;
+#if ASP_NET_CORE
+using Microsoft.AspNetCore.Http;
+
+#else
+using System.Collections.Specialized;
+using System.Web;
+#endif
 
 namespace NLog.Web.LayoutRenderers
 {
@@ -15,7 +18,7 @@ namespace NLog.Web.LayoutRenderers
     /// </summary>
     /// <para>Example usage of ${aspnet-request-url}:</para>
     /// <example>
-    /// <code lang="NLog Layout Renderer">
+    ///     <code lang="NLog Layout Renderer">
     /// ${aspnet-request-url:IncludeQueryString=true} - produces http://www.exmaple.com/?t=1
     /// ${aspnet-request-url:IncludeQueryString=false} - produces http://www.exmaple.com/
     /// ${aspnet-request-url:IncludePort=true} - produces http://www.exmaple.com:80/
@@ -51,13 +54,15 @@ namespace NLog.Web.LayoutRenderers
         /// <summary>
         /// Renders the Request URL from the HttpRequest
         /// </summary>
-        /// <param name="builder">The <see cref="StringBuilder"/> to append the rendered data to.</param>
+        /// <param name="builder">The <see cref="StringBuilder" /> to append the rendered data to.</param>
         /// <param name="logEvent">Logging event.</param>
         protected override void DoAppend(StringBuilder builder, LogEventInfo logEvent)
         {
             var httpRequest = HttpContextAccessor.HttpContext.TryGetRequest();
             if (httpRequest == null)
+            {
                 return;
+            }
 
             RenderUrl(httpRequest, builder);
         }
@@ -65,7 +70,7 @@ namespace NLog.Web.LayoutRenderers
 #if !ASP_NET_CORE
         private void RenderUrl(HttpRequestBase httpRequest, StringBuilder builder)
         {
-            var url =  httpRequest.Url;
+            var url = httpRequest.Url;
             if (url == null)
                 return;
 
@@ -88,17 +93,19 @@ namespace NLog.Web.LayoutRenderers
             builder.Append(pathAndQuery);
         }
 #else
-        private void RenderUrl(Microsoft.AspNetCore.Http.HttpRequest httpRequest, StringBuilder builder)
+        private void RenderUrl(HttpRequest httpRequest, StringBuilder builder)
         {
             if (IncludeScheme && !string.IsNullOrWhiteSpace(httpRequest.Scheme))
             {
                 builder.Append(httpRequest.Scheme);
                 builder.Append("://");
             }
+
             if (IncludeHost)
             {
                 builder.Append(httpRequest.Host.Host);
             }
+
             if (IncludePort && httpRequest.Host.Port > 0)
             {
                 builder.Append(':');
